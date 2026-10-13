@@ -152,12 +152,18 @@ STORAGES = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.environ.get("EMAIL_HOST", default="smtp.example.com")
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", default=587))
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", default="")
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", default="True") == "True"
-EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", default="False") == "True"
+MAILERS = {
+    'default': {
+        'BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+        'OPTIONS': {
+            'host': os.environ.get("EMAIL_HOST", default="smtp.example.com"),
+            'port': int(os.environ.get("EMAIL_PORT", default=587)),
+            'username': os.environ.get("EMAIL_HOST_USER", default=""),
+            'password': os.environ.get("EMAIL_HOST_PASSWORD", default=""),
+            'use_tls': os.environ.get("EMAIL_USE_TLS", default="True") == "True",
+            'use_ssl': os.environ.get("EMAIL_USE_SSL", default="False") == "True",
+        },
+    },
+}
 
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", default="noreply@videoflix.com")
