@@ -1,0 +1,32 @@
+# Environment
+.env
+.env.*
+!.env.template
+env/
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Django
+db.sqlite3
+media/
+static/
+staticfiles/
+*.log
+
+# Agent instructions (local only)
+AGENTS.md
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
