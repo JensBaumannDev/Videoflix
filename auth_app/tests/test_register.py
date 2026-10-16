@@ -334,3 +334,23 @@ class MakeUidb64Tests(APITestCase):
         user = User.objects.create_user(username=VALID_EMAIL, email=VALID_EMAIL, password='x')
         decoded_pk = force_str(urlsafe_base64_decode(make_uidb64(user)))
         self.assertEqual(decoded_pk, str(user.pk))
+
+
+class RegisterPasswordWhitespaceTests(RegisterTestMixin, APITestCase):
+    """Passwords containing any whitespace are rejected."""
+
+    def test_whitespace_anywhere_in_password(self):
+        """Spaces, tabs and newlines at any position return 400."""
+        for password in [f' {VALID_PASSWORD}', f'{VALID_PASSWORD} ', 'secure password',
+                         'secure\tpassword', 'secure\npassword', '   ']:
+            with self.subTest(password=password):
+                response = self.register(password=password, confirmed_password=password)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertEqual(response.data, {'detail': GENERIC_ERROR_MESSAGE})
+        self.assertFalse(User.objects.filter(email=VALID_EMAIL).exists())
+
+    def test_spaces_are_not_trimmed_into_a_valid_password(self):
+        """' password ' is rejected instead of being saved as 'password'."""
+        spaced = f' {VALID_PASSWORD} '
+        response = self.register(password=spaced, confirmed_password=VALID_PASSWORD)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
