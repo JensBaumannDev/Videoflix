@@ -3,14 +3,16 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from auth_app.api.serializers import RegistrationSerializer
+from auth_app.api.serializers import LoginSerializer, RegistrationSerializer
 from auth_app.tasks import queue_activation_email
 from auth_app.utils import (
     ACTIVATION_FAILED_MESSAGE,
     ACTIVATION_SUCCESS_MESSAGE,
     GENERIC_ERROR_MESSAGE,
     activate_user,
+    build_login_response,
     build_registration_response,
+    set_login_cookies,
 )
 
 
@@ -41,3 +43,20 @@ class ActivationView(APIView):
         if not activate_user(uidb64, token):
             return Response({'message': ACTIVATION_FAILED_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'message': ACTIVATION_SUCCESS_MESSAGE}, status=status.HTTP_200_OK)
+
+
+class LoginView(APIView):
+    """Log in an active user and set the JWTs as HttpOnly cookies."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        """Check the credentials and return the user with token cookies."""
+        serializer = LoginSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'detail': GENERIC_ERROR_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
+        user = serializer.validated_data['user']
+        response = Response(build_login_response(user), status=status.HTTP_200_OK)
+        set_login_cookies(response, user)
+        return response

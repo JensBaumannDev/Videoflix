@@ -9,6 +9,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from rest_framework_simplejwt.tokens import RefreshToken
 
 GENERIC_ERROR_MESSAGE = 'Please check your input and try again.'
 ACTIVATION_SUCCESS_MESSAGE = 'Account successfully activated.'
@@ -17,6 +18,9 @@ ACTIVATION_PATH = '/pages/auth/activate.html'
 ACTIVATION_SUBJECT = 'Confirm your email'
 LOGO_CID = 'videoflix-logo'
 LOGO_PATH = Path(__file__).resolve().parent / 'assets' / 'logo.png'
+LOGIN_SUCCESS_MESSAGE = 'Login successful'
+ACCESS_COOKIE_NAME = 'access_token'
+REFRESH_COOKIE_NAME = 'refresh_token'
 
 
 def make_uidb64(user):
@@ -91,3 +95,26 @@ def build_activation_email(user):
     email.attach_alternative(html_body, 'text/html')
     email.attach(build_logo_part())
     return email
+
+
+def build_login_response(user):
+    """Build the login response body defined in the endpoint doc."""
+    return {
+        'detail': LOGIN_SUCCESS_MESSAGE,
+        'user': {'id': user.id, 'username': user.username},
+    }
+
+
+def set_token_cookie(response, name, token):
+    """Set a JWT as HttpOnly cookie that expires together with the token."""
+    response.set_cookie(
+        name, str(token), max_age=int(token.lifetime.total_seconds()),
+        httponly=True, samesite='Lax', secure=False,
+    )
+
+
+def set_login_cookies(response, user):
+    """Create a token pair for the user and set both as cookies."""
+    refresh_token = RefreshToken.for_user(user)
+    set_token_cookie(response, ACCESS_COOKIE_NAME, refresh_token.access_token)
+    set_token_cookie(response, REFRESH_COOKIE_NAME, refresh_token)
