@@ -1,8 +1,10 @@
+import re
 import shutil
 import subprocess
 from pathlib import Path
 
 from django.conf import settings
+from django.http import FileResponse, Http404
 
 from video_app.models import Video
 
@@ -12,6 +14,10 @@ HLS_FOLDER = 'hls'
 HLS_SEGMENT_SECONDS = 10
 HLS_RESOLUTIONS = {'480p': 480, '720p': 720, '1080p': 1080}
 HLS_JOB_TIMEOUT = 60 * 60 * 3
+HLS_PLAYLIST_NAME = 'index.m3u8'
+HLS_SEGMENT_PATTERN = re.compile(r'\d{3,}\.ts')
+MANIFEST_CONTENT_TYPE = 'application/vnd.apple.mpegurl'
+SEGMENT_CONTENT_TYPE = 'video/MP2T'
 
 
 class FfmpegError(RuntimeError):
@@ -72,7 +78,7 @@ def build_hls_command(source_path, output_dir, height):
         '-force_key_frames', f'expr:gte(t,n_forced*{HLS_SEGMENT_SECONDS})',
         '-c:a', 'aac', '-b:a', '128k', '-ac', '2',
         '-f', 'hls', '-hls_time', str(HLS_SEGMENT_SECONDS), '-hls_playlist_type', 'vod',
-        '-hls_segment_filename', str(output_dir / '%03d.ts'), str(output_dir / 'index.m3u8'),
+        '-hls_segment_filename', str(output_dir / '%03d.ts'), str(output_dir / HLS_PLAYLIST_NAME),
     ]
 
 
@@ -87,3 +93,27 @@ def convert_rendition(video, resolution, height):
     output_dir = build_hls_dir(video.pk, resolution)
     prepare_empty_dir(output_dir)
     run_ffmpeg(build_hls_command(video.video_file.path, output_dir, height))
+
+
+def find_hls_file(video_id, resolution, file_name):
+    """Return the path of an HLS file of an existing video, or None."""
+    if resolution not in HLS_RESOLUTIONS:
+        return None
+    if not Video.objects.filter(pk=video_id).exists():
+        return None
+    file_path = build_hls_dir(video_id, resolution) / file_name
+    return file_path if file_path.is_file() else None
+
+
+def find_hls_segment(video_id, resolution, segment):
+    """Return the path of a segment like 000.ts, or None for any other name."""
+    if not HLS_SEGMENT_PATTERN.fullmatch(segment):
+        return None
+    return find_hls_file(video_id, resolution, segment)
+
+
+def build_file_response(file_path, content_type):
+    """Stream the file with the given content type, or raise 404 if it is missing."""
+    if file_path is None:
+        raise Http404
+    return FileResponse(file_path.open('rb'), content_type=content_type)
