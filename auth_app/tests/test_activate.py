@@ -84,7 +84,8 @@ class ActivateInvalidTokenTests(ActivateTestMixin, APITestCase):
 
     def test_token_of_other_user(self):
         """A token created for another user fails."""
-        other = User.objects.create_user(username='o@example.com', email='o@example.com', password='y')
+        other = User.objects.create_user(
+            username='o@example.com', email='o@example.com', password='y')
         self.assert_failed(self.activate(token=default_token_generator.make_token(other)))
 
     @override_settings(PASSWORD_RESET_TIMEOUT=-1)
@@ -115,7 +116,8 @@ class ActivateInvalidUidTests(ActivateTestMixin, APITestCase):
 
     def test_uid_of_other_user(self):
         """A valid token with another user's uid fails."""
-        other = User.objects.create_user(username='o@example.com', email='o@example.com', password='y')
+        other = User.objects.create_user(
+            username='o@example.com', email='o@example.com', password='y')
         self.assert_failed(self.activate(uidb64=make_uidb64(other)))
 
     def test_malformed_uids(self):

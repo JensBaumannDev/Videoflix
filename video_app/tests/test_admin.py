@@ -25,7 +25,8 @@ class VideoAdminTests(TestCase):
 
     def setUp(self):
         """Log in as a superuser for every test."""
-        self.superuser = User.objects.create_superuser('admin', 'admin@example.com', 'adminpassword')
+        self.superuser = User.objects.create_superuser(
+            'admin', 'admin@example.com', 'adminpassword')
         self.client.force_login(self.superuser)
 
     def test_video_is_registered_in_admin(self):
@@ -74,7 +75,8 @@ class VideoAdminUploadTests(TestCase):
 
     def setUp(self):
         """Log in as a superuser for every test."""
-        self.superuser = User.objects.create_superuser('admin', 'admin@example.com', 'adminpassword')
+        self.superuser = User.objects.create_superuser(
+            'admin', 'admin@example.com', 'adminpassword')
         self.client.force_login(self.superuser)
 
     def post_video(self, **overrides):
