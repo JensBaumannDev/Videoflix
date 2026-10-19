@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 
 from auth_app.api.serializers import (
     LoginSerializer,
+    PasswordConfirmSerializer,
     PasswordResetSerializer,
     RegistrationSerializer,
 )
@@ -16,6 +17,7 @@ from auth_app.utils import (
     GENERIC_ERROR_MESSAGE,
     LOGOUT_SUCCESS_MESSAGE,
     PASSWORD_RESET_SENT_MESSAGE,
+    PASSWORD_RESET_SUCCESS_MESSAGE,
     REFRESH_COOKIE_NAME,
     REFRESH_INVALID_MESSAGE,
     REFRESH_MISSING_MESSAGE,
@@ -27,6 +29,7 @@ from auth_app.utils import (
     delete_token_cookies,
     find_active_user_by_email,
     get_valid_refresh_token,
+    reset_user_password,
     set_login_cookies,
     set_token_cookie,
 )
@@ -132,3 +135,20 @@ class PasswordResetView(APIView):
         if user is not None:
             queue_password_reset_email(user)
         return Response({'detail': PASSWORD_RESET_SENT_MESSAGE}, status=status.HTTP_200_OK)
+
+
+class PasswordConfirmView(APIView):
+    """Set a new password via the uid and token from the reset email link."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request, uidb64, token):
+        """Validate the passwords and the link, then save the new password."""
+        serializer = PasswordConfirmSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'detail': GENERIC_ERROR_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
+        new_password = serializer.validated_data['new_password']
+        if not reset_user_password(uidb64, token, new_password):
+            return Response({'detail': GENERIC_ERROR_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'detail': PASSWORD_RESET_SUCCESS_MESSAGE}, status=status.HTTP_200_OK)

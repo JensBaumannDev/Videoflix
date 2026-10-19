@@ -20,6 +20,7 @@ ACTIVATION_SUBJECT = 'Confirm your email'
 PASSWORD_RESET_PATH = '/pages/auth/confirm_password.html'
 PASSWORD_RESET_SUBJECT = 'Reset your Password'
 PASSWORD_RESET_SENT_MESSAGE = 'An email has been sent to reset your password.'
+PASSWORD_RESET_SUCCESS_MESSAGE = 'Your Password has been successfully reset.'
 LOGO_CID = 'videoflix-logo'
 LOGO_PATH = Path(__file__).resolve().parent / 'assets' / 'logo.png'
 LOGIN_SUCCESS_MESSAGE = 'Login successful'
@@ -179,3 +180,23 @@ def build_refresh_response(access_token):
 def find_active_user_by_email(email):
     """Return the active user with this email (case-insensitive) or None."""
     return User.objects.filter(email__iexact=email, is_active=True).first()
+
+
+def get_user_for_password_reset(uidb64, token):
+    """Return the active user if uid and reset token are valid, else None."""
+    user = get_user_from_uidb64(uidb64)
+    if user is None or not user.is_active:
+        return None
+    if not default_token_generator.check_token(user, token):
+        return None
+    return user
+
+
+def reset_user_password(uidb64, token, new_password):
+    """Set the new password if the reset link is valid; return success."""
+    user = get_user_for_password_reset(uidb64, token)
+    if user is None:
+        return False
+    user.set_password(new_password)
+    user.save(update_fields=['password'])
+    return True
