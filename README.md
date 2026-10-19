@@ -46,6 +46,7 @@ Videos are uploaded through the Django admin. Thumbnail creation and HLS convers
 * **Password Reset:** Reset email with a link valid for 24 hours; the old password becomes invalid immediately.
 * **Background Video Processing:** After an upload, a thumbnail (taken from 10 % into the video) and HLS renditions in 480p, 720p and 1080p are created automatically.
 * **Adaptive Streaming:** Video list for the dashboard (newest first), HLS playlists and segments per resolution – protected by the login cookie.
+* **Caching:** The video list is served from Redis and refreshed automatically whenever a video is added, changed or deleted.
 * **Automatic Cleanup:** Files of deleted or replaced videos are removed; half-finished conversions are never served.
 * **Test-Driven Development:** Every endpoint and job is covered by tests (100 % coverage), including end-to-end tests with real FFmpeg conversions.
 
