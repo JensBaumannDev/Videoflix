@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.files.storage import default_storage
 from django.http import FileResponse, Http404
 
@@ -21,6 +22,8 @@ HLS_PLAYLIST_NAME = 'index.m3u8'
 HLS_SEGMENT_PATTERN = re.compile(r'\d{3,}\.ts')
 MANIFEST_CONTENT_TYPE = 'application/vnd.apple.mpegurl'
 SEGMENT_CONTENT_TYPE = 'video/MP2T'
+VIDEO_LIST_CACHE_KEY = 'video_list'
+VIDEO_LIST_CACHE_TIMEOUT = 60 * 15
 
 
 class FfmpegError(RuntimeError):
@@ -173,3 +176,17 @@ def build_file_response(file_path, content_type):
     if file_path is None:
         raise Http404
     return FileResponse(file_path.open('rb'), content_type=content_type)
+
+
+def get_video_list():
+    """Return all videos newest first, read from the Redis cache when possible."""
+    videos = cache.get(VIDEO_LIST_CACHE_KEY)
+    if videos is None:
+        videos = list(Video.objects.order_by('-created_at', '-id'))
+        cache.set(VIDEO_LIST_CACHE_KEY, videos, VIDEO_LIST_CACHE_TIMEOUT)
+    return videos
+
+
+def clear_video_list_cache():
+    """Remove the cached video list so the next request reads the database."""
+    cache.delete(VIDEO_LIST_CACHE_KEY)

@@ -30,7 +30,9 @@ class VideoProcessingSignalTests(TempMediaMixin, TestCase):
         with self.captureOnCommitCallbacks(execute=False) as callbacks:
             create_video()
         enqueue.assert_not_called()
-        self.assertEqual(len(callbacks), 1)
+        for callback in callbacks:
+            callback()
+        self.assertEqual(enqueue.call_count, 2)
 
     def test_changing_other_fields_queues_nothing(self, enqueue):
         """Editing title, description or category needs no processing."""

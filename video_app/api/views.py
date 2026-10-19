@@ -3,7 +3,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from video_app.api.serializers import VideoListSerializer
-from video_app.models import Video
 from video_app.utils import (
     HLS_PLAYLIST_NAME,
     MANIFEST_CONTENT_TYPE,
@@ -11,15 +10,19 @@ from video_app.utils import (
     build_file_response,
     find_hls_file,
     find_hls_segment,
+    get_video_list,
 )
 
 
 class VideoListView(ListAPIView):
     """List all videos, newest first, for logged-in users."""
 
-    queryset = Video.objects.order_by('-created_at', '-id')
     serializer_class = VideoListSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Return the (cached) list of all videos, newest first."""
+        return get_video_list()
 
 
 class VideoManifestView(APIView):
