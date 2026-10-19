@@ -4,9 +4,10 @@ Django settings for the Videoflix backend.
 All environment-specific values are loaded from the .env file.
 """
 
+import os
 from datetime import timedelta
 from pathlib import Path
-import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -121,7 +122,7 @@ REST_FRAMEWORK = {
         'auth_app.api.authentication.CookieJWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
 }
 

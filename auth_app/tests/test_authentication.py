@@ -198,3 +198,33 @@ class CookieAuthSettingsTests(TestCase):
         """REST_FRAMEWORK uses the cookie class by default."""
         defaults = settings.REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES']
         self.assertEqual(defaults, ['auth_app.api.authentication.CookieJWTAuthentication'])
+
+
+class DefaultPermissionTestView(APIView):
+    """View without own permission_classes, so the project default applies."""
+
+    def get(self, request):
+        """Return a fixed answer."""
+        return Response({'ok': True})
+
+
+class DefaultPermissionTests(CookieAuthTestMixin, TestCase):
+    """New views are protected unless they explicitly allow anonymous access."""
+
+    def call_default_view(self, cookies=None):
+        """Call the view that relies on the default permission."""
+        return DefaultPermissionTestView.as_view()(self.make_request(cookies))
+
+    def test_default_permission_is_is_authenticated(self):
+        """REST_FRAMEWORK requires a logged-in user by default."""
+        defaults = settings.REST_FRAMEWORK['DEFAULT_PERMISSION_CLASSES']
+        self.assertEqual(defaults, ['rest_framework.permissions.IsAuthenticated'])
+
+    def test_view_without_permission_rejects_anonymous_users(self):
+        """Forgetting permission_classes never opens a view to everyone."""
+        self.assertEqual(self.call_default_view().status_code, 401)
+
+    def test_view_without_permission_allows_logged_in_users(self):
+        """A valid access token cookie is enough."""
+        cookies = {'access_token': str(AccessToken.for_user(self.user))}
+        self.assertEqual(self.call_default_view(cookies).status_code, 200)
