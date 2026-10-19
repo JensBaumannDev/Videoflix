@@ -9,6 +9,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 GENERIC_ERROR_MESSAGE = 'Please check your input and try again.'
@@ -21,6 +22,12 @@ LOGO_PATH = Path(__file__).resolve().parent / 'assets' / 'logo.png'
 LOGIN_SUCCESS_MESSAGE = 'Login successful'
 ACCESS_COOKIE_NAME = 'access_token'
 REFRESH_COOKIE_NAME = 'refresh_token'
+LOGOUT_SUCCESS_MESSAGE = (
+    'Logout successful! All tokens will be deleted. Refresh token is now invalid.'
+)
+REFRESH_SUCCESS_MESSAGE = 'Token refreshed'
+REFRESH_MISSING_MESSAGE = 'Refresh token is missing.'
+REFRESH_INVALID_MESSAGE = 'Refresh token is invalid or expired.'
 
 
 def make_uidb64(user):
@@ -118,3 +125,35 @@ def set_login_cookies(response, user):
     refresh_token = RefreshToken.for_user(user)
     set_token_cookie(response, ACCESS_COOKIE_NAME, refresh_token.access_token)
     set_token_cookie(response, REFRESH_COOKIE_NAME, refresh_token)
+
+
+def delete_token_cookies(response):
+    """Delete the access and refresh token cookies in the browser."""
+    for name in (ACCESS_COOKIE_NAME, REFRESH_COOKIE_NAME):
+        response.delete_cookie(name, samesite='Lax')
+
+
+def blacklist_refresh_token(raw_token):
+    """Put the refresh token on the blacklist; return False if it is invalid."""
+    try:
+        RefreshToken(raw_token).blacklist()
+    except TokenError:
+        return False
+    return True
+
+
+def get_valid_refresh_token(raw_token):
+    """Return the refresh token if it is valid and its user active, else None."""
+    try:
+        refresh_token = RefreshToken(raw_token)
+    except TokenError:
+        return None
+    user_id = refresh_token.get('user_id')
+    if not User.objects.filter(pk=user_id, is_active=True).exists():
+        return None
+    return refresh_token
+
+
+def build_refresh_response(access_token):
+    """Build the token refresh response body defined in the endpoint doc."""
+    return {'detail': REFRESH_SUCCESS_MESSAGE, 'access': str(access_token)}
