@@ -60,7 +60,8 @@ class ActivationView(APIView):
     def get(self, request, uidb64, token):
         """Activate the account or return a generic failure message."""
         if not activate_user(uidb64, token):
-            return Response({'message': ACTIVATION_FAILED_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'message': ACTIVATION_FAILED_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'message': ACTIVATION_SUCCESS_MESSAGE}, status=status.HTTP_200_OK)
 
 
@@ -91,9 +92,11 @@ class LogoutView(APIView):
         """Log out with the refresh token cookie; cookies are deleted in any case."""
         raw_token = request.COOKIES.get(REFRESH_COOKIE_NAME)
         if not raw_token:
-            response = Response({'detail': REFRESH_MISSING_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
+            response = Response(
+                {'detail': REFRESH_MISSING_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
         elif not blacklist_refresh_token(raw_token):
-            response = Response({'detail': REFRESH_INVALID_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
+            response = Response(
+                {'detail': REFRESH_INVALID_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
         else:
             response = Response({'detail': LOGOUT_SUCCESS_MESSAGE}, status=status.HTTP_200_OK)
         delete_token_cookies(response)
@@ -110,10 +113,12 @@ class CookieTokenRefreshView(APIView):
         """Return a new access token or 400/401 for a missing/invalid refresh token."""
         raw_token = request.COOKIES.get(REFRESH_COOKIE_NAME)
         if not raw_token:
-            return Response({'detail': REFRESH_MISSING_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': REFRESH_MISSING_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
         refresh_token = get_valid_refresh_token(raw_token)
         if refresh_token is None:
-            return Response({'detail': REFRESH_INVALID_MESSAGE}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {'detail': REFRESH_INVALID_MESSAGE}, status=status.HTTP_401_UNAUTHORIZED)
         access_token = refresh_token.access_token
         response = Response(build_refresh_response(access_token), status=status.HTTP_200_OK)
         set_token_cookie(response, ACCESS_COOKIE_NAME, access_token)

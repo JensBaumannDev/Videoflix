@@ -316,7 +316,8 @@ class LoginFlowTests(APITestCase):
 
     def register(self):
         """Register a new user through the endpoint and return the user."""
-        data = {'email': FLOW_EMAIL, 'password': FLOW_PASSWORD, 'confirmed_password': FLOW_PASSWORD}
+        data = {'email': FLOW_EMAIL, 'password': FLOW_PASSWORD,
+                'confirmed_password': FLOW_PASSWORD}
         self.client.post(reverse('register'), data)
         return User.objects.get(email=FLOW_EMAIL)
 

@@ -216,7 +216,8 @@ class PasswordConfirmInvalidInputTests(PasswordConfirmTestMixin, APITestCase):
 
     def test_passwords_do_not_match(self):
         """Different passwords are rejected."""
-        self.assert_failed(self.confirm({'new_password': NEW_PASSWORD, 'confirm_password': 'other'}))
+        data = {'new_password': NEW_PASSWORD, 'confirm_password': 'other'}
+        self.assert_failed(self.confirm(data))
 
     def test_passwords_differ_only_in_case(self):
         """The comparison is case-sensitive."""
