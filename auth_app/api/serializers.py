@@ -53,3 +53,9 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError('Invalid credentials.')
         attrs['user'] = user
         return attrs
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    """Validate the email address for a password reset request."""
+
+    email = serializers.EmailField()

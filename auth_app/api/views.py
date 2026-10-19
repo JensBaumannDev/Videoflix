@@ -3,14 +3,19 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from auth_app.api.serializers import LoginSerializer, RegistrationSerializer
-from auth_app.tasks import queue_activation_email
+from auth_app.api.serializers import (
+    LoginSerializer,
+    PasswordResetSerializer,
+    RegistrationSerializer,
+)
+from auth_app.tasks import queue_activation_email, queue_password_reset_email
 from auth_app.utils import (
     ACTIVATION_FAILED_MESSAGE,
     ACTIVATION_SUCCESS_MESSAGE,
     ACCESS_COOKIE_NAME,
     GENERIC_ERROR_MESSAGE,
     LOGOUT_SUCCESS_MESSAGE,
+    PASSWORD_RESET_SENT_MESSAGE,
     REFRESH_COOKIE_NAME,
     REFRESH_INVALID_MESSAGE,
     REFRESH_MISSING_MESSAGE,
@@ -20,6 +25,7 @@ from auth_app.utils import (
     build_refresh_response,
     build_registration_response,
     delete_token_cookies,
+    find_active_user_by_email,
     get_valid_refresh_token,
     set_login_cookies,
     set_token_cookie,
@@ -109,3 +115,20 @@ class CookieTokenRefreshView(APIView):
         response = Response(build_refresh_response(access_token), status=status.HTTP_200_OK)
         set_token_cookie(response, ACCESS_COOKIE_NAME, access_token)
         return response
+
+
+class PasswordResetView(APIView):
+    """Queue a reset email without revealing whether the account exists."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        """Validate the email, queue the mail for an active user, always answer 200."""
+        serializer = PasswordResetSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'detail': GENERIC_ERROR_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
+        user = find_active_user_by_email(serializer.validated_data['email'])
+        if user is not None:
+            queue_password_reset_email(user)
+        return Response({'detail': PASSWORD_RESET_SENT_MESSAGE}, status=status.HTTP_200_OK)

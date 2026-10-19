@@ -17,6 +17,9 @@ ACTIVATION_SUCCESS_MESSAGE = 'Account successfully activated.'
 ACTIVATION_FAILED_MESSAGE = 'Activation failed. The link is invalid or has expired.'
 ACTIVATION_PATH = '/pages/auth/activate.html'
 ACTIVATION_SUBJECT = 'Confirm your email'
+PASSWORD_RESET_PATH = '/pages/auth/confirm_password.html'
+PASSWORD_RESET_SUBJECT = 'Reset your Password'
+PASSWORD_RESET_SENT_MESSAGE = 'An email has been sent to reset your password.'
 LOGO_CID = 'videoflix-logo'
 LOGO_PATH = Path(__file__).resolve().parent / 'assets' / 'logo.png'
 LOGIN_SUCCESS_MESSAGE = 'Login successful'
@@ -35,8 +38,8 @@ def make_uidb64(user):
     return urlsafe_base64_encode(force_bytes(user.pk))
 
 
-def make_activation_token(user):
-    """Return a one-time token used to activate the user's account."""
+def make_user_token(user):
+    """Return a one-time token for account activation and password reset."""
     return default_token_generator.make_token(user)
 
 
@@ -44,7 +47,7 @@ def build_registration_response(user):
     """Build the registration response body defined in the endpoint doc."""
     return {
         'user': {'id': user.id, 'email': user.email},
-        'token': make_activation_token(user),
+        'token': make_user_token(user),
     }
 
 
@@ -69,18 +72,20 @@ def activate_user(uidb64, token):
     return True
 
 
+def build_frontend_link(user, path):
+    """Return a frontend URL with the user's uid and token as query."""
+    query = urlencode({'uid': make_uidb64(user), 'token': make_user_token(user)})
+    return f'{settings.FRONTEND_URL}{path}?{query}'
+
+
 def build_activation_link(user):
     """Return the frontend activation URL with uid and token as query."""
-    query = urlencode({'uid': make_uidb64(user), 'token': make_activation_token(user)})
-    return f'{settings.FRONTEND_URL}{ACTIVATION_PATH}?{query}'
+    return build_frontend_link(user, ACTIVATION_PATH)
 
 
-def build_activation_context(user):
-    """Return the template variables for the activation email."""
-    return {
-        'activation_link': build_activation_link(user),
-        'logo_cid': LOGO_CID,
-    }
+def build_password_reset_link(user):
+    """Return the frontend password confirm URL with uid and token as query."""
+    return build_frontend_link(user, PASSWORD_RESET_PATH)
 
 
 def build_logo_part():
@@ -93,15 +98,27 @@ def build_logo_part():
     return logo
 
 
-def build_activation_email(user):
-    """Build the HTML activation email with text fallback and inline logo."""
-    context = build_activation_context(user)
-    text_body = render_to_string('auth_app/emails/activation_email.txt', context)
-    html_body = render_to_string('auth_app/emails/activation_email.html', context)
-    email = EmailMultiAlternatives(ACTIVATION_SUBJECT, text_body, to=[user.email])
+def build_html_email(subject, template_name, context, recipient):
+    """Build an HTML email with text fallback and inline logo from a template pair."""
+    context = {**context, 'logo_cid': LOGO_CID}
+    text_body = render_to_string(f'auth_app/emails/{template_name}.txt', context)
+    html_body = render_to_string(f'auth_app/emails/{template_name}.html', context)
+    email = EmailMultiAlternatives(subject, text_body, to=[recipient])
     email.attach_alternative(html_body, 'text/html')
     email.attach(build_logo_part())
     return email
+
+
+def build_activation_email(user):
+    """Build the activation email with the link to the frontend."""
+    context = {'activation_link': build_activation_link(user)}
+    return build_html_email(ACTIVATION_SUBJECT, 'activation_email', context, user.email)
+
+
+def build_password_reset_email(user):
+    """Build the password reset email with the link to the frontend."""
+    context = {'reset_link': build_password_reset_link(user)}
+    return build_html_email(PASSWORD_RESET_SUBJECT, 'password_reset_email', context, user.email)
 
 
 def build_login_response(user):
@@ -157,3 +174,8 @@ def get_valid_refresh_token(raw_token):
 def build_refresh_response(access_token):
     """Build the token refresh response body defined in the endpoint doc."""
     return {'detail': REFRESH_SUCCESS_MESSAGE, 'access': str(access_token)}
+
+
+def find_active_user_by_email(email):
+    """Return the active user with this email (case-insensitive) or None."""
+    return User.objects.filter(email__iexact=email, is_active=True).first()
