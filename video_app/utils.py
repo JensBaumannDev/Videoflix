@@ -10,6 +10,7 @@ from video_app.models import Video
 
 THUMBNAIL_FOLDER = 'thumbnail'
 THUMBNAIL_MAX_WIDTH = 640
+THUMBNAIL_POSITION = 0.1
 HLS_FOLDER = 'hls'
 HLS_SEGMENT_SECONDS = 10
 HLS_RESOLUTIONS = {'480p': 480, '720p': 720, '1080p': 1080}
@@ -56,12 +57,24 @@ def build_ffmpeg_error_message(error):
     return f'FFmpeg failed with exit code {error.returncode}'
 
 
+def probe_duration(source_path):
+    """Return the video duration in seconds via ffprobe, or 0.0 if unknown."""
+    command = ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+               '-of', 'csv=p=0', str(source_path)]
+    result = subprocess.run(command, capture_output=True, text=True)
+    try:
+        return max(float(result.stdout.strip()), 0.0)
+    except ValueError:
+        return 0.0
+
+
 def extract_thumbnail(source_path, output_path):
-    """Save one representative frame of the video as JPEG, at most 640 px wide."""
+    """Save a representative frame from 10 % into the video (after the intro) as JPEG."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    start_seconds = probe_duration(source_path) * THUMBNAIL_POSITION
     video_filter = f"thumbnail,scale='min({THUMBNAIL_MAX_WIDTH},iw)':-2"
-    run_ffmpeg(['-i', str(source_path), '-vf', video_filter,
-                '-frames:v', '1', str(output_path)])
+    run_ffmpeg(['-ss', f'{start_seconds:.3f}', '-i', str(source_path),
+                '-vf', video_filter, '-frames:v', '1', str(output_path)])
 
 
 def build_hls_dir(video_id, resolution):
