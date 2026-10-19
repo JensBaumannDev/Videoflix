@@ -281,8 +281,8 @@ class PasswordResetLinkTests(TestCase):
         """After 24 hours the link no longer works."""
         self.assertFalse(self.check_token_at(datetime.now() + timedelta(hours=24, minutes=1)))
 
-    def test_token_is_invalid_after_login(self):
-        """Logging in after the request invalidates the link (Django default)."""
+    def test_token_is_invalid_after_last_login_changed(self):
+        """A changed last_login invalidates the link (part of Django's token hash)."""
         self.user.last_login = timezone.now()
         self.user.save()
         self.assertFalse(default_token_generator.check_token(self.user, self.query['token'][0]))

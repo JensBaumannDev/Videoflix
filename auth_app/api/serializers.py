@@ -4,6 +4,13 @@ from django.db.models import Q
 from rest_framework import serializers
 
 
+def reject_whitespace(password):
+    """Raise a validation error if the password contains any whitespace."""
+    if any(char.isspace() for char in password):
+        raise serializers.ValidationError('Password must not contain spaces.')
+    return password
+
+
 class RegistrationSerializer(serializers.Serializer):
     """Validate registration data and create an inactive user."""
 
@@ -20,9 +27,7 @@ class RegistrationSerializer(serializers.Serializer):
 
     def validate_password(self, value):
         """Reject passwords that contain any whitespace character."""
-        if any(char.isspace() for char in value):
-            raise serializers.ValidationError('Password must not contain spaces.')
-        return value
+        return reject_whitespace(value)
 
     def validate(self, attrs):
         """Ensure both password fields match."""
@@ -59,3 +64,20 @@ class PasswordResetSerializer(serializers.Serializer):
     """Validate the email address for a password reset request."""
 
     email = serializers.EmailField()
+
+
+class PasswordConfirmSerializer(serializers.Serializer):
+    """Validate the new password and its confirmation for a password reset."""
+
+    new_password = serializers.CharField(write_only=True, trim_whitespace=False)
+    confirm_password = serializers.CharField(write_only=True, trim_whitespace=False)
+
+    def validate_new_password(self, value):
+        """Reject passwords that contain any whitespace character."""
+        return reject_whitespace(value)
+
+    def validate(self, attrs):
+        """Ensure both password fields match."""
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError('Passwords do not match.')
+        return attrs
