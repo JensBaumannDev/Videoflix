@@ -185,15 +185,20 @@ class ThumbnailReplacementTests(CleanupTestMixin, TestCase):
         self.write_media_file('videos/new.mp4')
         Video.objects.filter(pk=video.pk).update(video_file='videos/new.mp4')
         create_thumbnail(video.pk)
+        video.refresh_from_db()
         self.assertFalse(self.media_exists(old_thumbnail))
-        self.assertTrue(self.media_exists('thumbnail/new.jpg'))
+        self.assertRegex(video.thumbnail.name, r'^thumbnail/new_[0-9a-f]{8}\.jpg$')
+        self.assertTrue(self.media_exists(video.thumbnail.name))
 
-    def test_thumbnail_with_same_name_is_kept(self, run_ffmpeg, probe):
-        """Regenerating with the same name keeps the new file."""
+    def test_regenerating_replaces_the_old_thumbnail(self, run_ffmpeg, probe):
+        """Running the job again for the same file leaves only the new image."""
         self.fake_thumbnail(run_ffmpeg)
         video = self.create_video_with_files('movie.mp4')
+        old_thumbnail = video.thumbnail.name
         create_thumbnail(video.pk)
         video.refresh_from_db()
+        self.assertNotEqual(video.thumbnail.name, old_thumbnail)
+        self.assertFalse(self.media_exists(old_thumbnail))
         self.assertTrue(self.media_exists(video.thumbnail.name))
 
     def test_first_thumbnail_deletes_nothing(self, run_ffmpeg, probe):

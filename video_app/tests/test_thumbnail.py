@@ -23,22 +23,27 @@ from video_app.utils import (
 )
 
 class ThumbnailNameTests(TempMediaMixin, TestCase):
-    """The thumbnail file is named after the video file."""
+    """The thumbnail is named after the video file plus a random suffix."""
 
-    def test_name_uses_video_file_stem(self):
-        """videos/movie.mp4 becomes thumbnail/movie.jpg."""
+    def test_name_uses_video_file_stem_and_suffix(self):
+        """videos/movie.mp4 becomes thumbnail/movie_<8 hex chars>.jpg."""
         video = create_video(video_file=make_upload('movie.mp4'))
-        self.assertEqual(build_thumbnail_name(video), 'thumbnail/movie.jpg')
+        self.assertRegex(build_thumbnail_name(video), r'^thumbnail/movie_[0-9a-f]{8}\.jpg$')
 
     def test_name_for_other_extensions(self):
         """The original extension is replaced by .jpg."""
         video = create_video(video_file=make_upload('clip.MOV', 'video/quicktime'))
-        self.assertEqual(build_thumbnail_name(video), 'thumbnail/clip.jpg')
+        self.assertRegex(build_thumbnail_name(video), r'^thumbnail/clip_[0-9a-f]{8}\.jpg$')
 
     def test_name_with_dots_in_file_name(self):
         """Only the last extension is replaced."""
         video = create_video(video_file=make_upload('my.holiday.mp4'))
-        self.assertEqual(build_thumbnail_name(video), 'thumbnail/my.holiday.jpg')
+        self.assertRegex(build_thumbnail_name(video), r'^thumbnail/my\.holiday_[0-9a-f]{8}\.jpg$')
+
+    def test_every_new_thumbnail_gets_a_new_name(self):
+        """A new URL makes browsers load the new image instead of a cached one."""
+        video = create_video(video_file=make_upload('movie.mp4'))
+        self.assertNotEqual(build_thumbnail_name(video), build_thumbnail_name(video))
 
     def test_duplicate_upload_names_get_different_thumbnails(self):
         """Django renames the second upload, so thumbnails do not collide."""
@@ -73,8 +78,8 @@ class CreateThumbnailTaskTests(TempMediaMixin, TestCase):
         command = run.call_args.args[0]
         self.assertEqual(command[0], 'ffmpeg')
         self.assertIn(video.video_file.path, command)
-        expected = Path(self.media_root) / 'thumbnail' / 'movie.jpg'
-        self.assertEqual(Path(command[-1]), expected)
+        self.assertEqual(Path(command[-1]).parent, Path(self.media_root) / 'thumbnail')
+        self.assertRegex(Path(command[-1]).name, r'^movie_[0-9a-f]{8}\.jpg$')
 
     def test_seeks_to_ten_percent_of_the_duration(self, run):
         """At 10 % of a 100 s video the frame search starts at 10 s."""
@@ -125,7 +130,7 @@ class CreateThumbnailTaskTests(TempMediaMixin, TestCase):
         video = create_video()
         create_thumbnail(video.pk)
         video.refresh_from_db()
-        self.assertEqual(video.thumbnail.name, 'thumbnail/movie.jpg')
+        self.assertRegex(video.thumbnail.name, r'^thumbnail/movie_[0-9a-f]{8}\.jpg$')
         self.assertTrue(Path(video.thumbnail.path).is_file())
 
     def test_creates_missing_thumbnail_folder(self, run):
@@ -197,7 +202,8 @@ class CreateThumbnailTaskTests(TempMediaMixin, TestCase):
         create_thumbnail(video.pk)
         create_thumbnail(video.pk)
         files = list((Path(self.media_root) / 'thumbnail').iterdir())
-        self.assertEqual([file.name for file in files], ['movie.jpg'])
+        video.refresh_from_db()
+        self.assertEqual([file.name for file in files], [Path(video.thumbnail.name).name])
 
 
 def completed(stdout, returncode=0):
@@ -289,7 +295,7 @@ class CreateThumbnailWithRealFfmpegTests(TempMediaMixin, TestCase):
         video = create_video(video_file=generate_video_upload(self.media_root, 'real.mkv'))
         create_thumbnail(video.pk)
         video.refresh_from_db()
-        self.assertEqual(video.thumbnail.name, 'thumbnail/real.jpg')
+        self.assertRegex(video.thumbnail.name, r'^thumbnail/real_[0-9a-f]{8}\.jpg$')
 
     def test_probe_duration_of_real_video(self):
         """ffprobe measures a generated 5 second video."""
