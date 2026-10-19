@@ -4,6 +4,7 @@ import subprocess
 from pathlib import Path
 
 from django.conf import settings
+from django.core.files.storage import default_storage
 from django.http import FileResponse, Http404
 
 from video_app.models import Video
@@ -35,10 +36,23 @@ def has_source_file(video):
     return bool(video.video_file) and Path(video.video_file.path).is_file()
 
 
-def video_file_changed(video):
-    """Return whether the video is new or got another file than in the database."""
+def get_stored_video_file(video):
+    """Return the video file name saved in the database, or None for a new video."""
     stored_names = Video.objects.filter(pk=video.pk).values_list('video_file', flat=True)
-    return stored_names.first() != video.video_file.name
+    return stored_names.first()
+
+
+def delete_media_file(storage_name):
+    """Delete a file from the media storage; empty names and missing files are ignored."""
+    if storage_name:
+        default_storage.delete(storage_name)
+
+
+def delete_video_files(video_id, storage_names):
+    """Delete the given media files and the whole HLS folder of a video."""
+    for storage_name in storage_names:
+        delete_media_file(storage_name)
+    shutil.rmtree(build_hls_root(video_id), ignore_errors=True)
 
 
 def run_ffmpeg(arguments):
@@ -77,9 +91,14 @@ def extract_thumbnail(source_path, output_path):
                 '-vf', video_filter, '-frames:v', '1', str(output_path)])
 
 
+def build_hls_root(video_id):
+    """Return the HLS folder of a video, e.g. MEDIA_ROOT/hls/1."""
+    return Path(settings.MEDIA_ROOT) / HLS_FOLDER / str(video_id)
+
+
 def build_hls_dir(video_id, resolution):
     """Return the folder for the HLS files, e.g. MEDIA_ROOT/hls/1/480p."""
-    return Path(settings.MEDIA_ROOT) / HLS_FOLDER / str(video_id) / resolution
+    return build_hls_root(video_id) / resolution
 
 
 def build_hls_command(source_path, output_dir, height):
