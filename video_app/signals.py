@@ -4,7 +4,12 @@ from django.dispatch import receiver
 
 from video_app.models import Video
 from video_app.tasks import queue_video_processing
-from video_app.utils import delete_media_file, delete_video_files, get_stored_video_file
+from video_app.utils import (
+    clear_video_list_cache,
+    delete_media_file,
+    delete_video_files,
+    get_stored_video_file,
+)
 
 
 @receiver(pre_save, sender=Video)
@@ -30,3 +35,9 @@ def delete_files_of_deleted_video(sender, instance, **kwargs):
     video_id = instance.pk
     storage_names = [instance.video_file.name, instance.thumbnail.name]
     transaction.on_commit(lambda: delete_video_files(video_id, storage_names))
+
+
+@receiver([post_save, post_delete], sender=Video)
+def clear_cached_video_list(sender, **kwargs):
+    """After the commit, drop the cached video list so changes show up."""
+    transaction.on_commit(clear_video_list_cache)
