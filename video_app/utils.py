@@ -1,4 +1,5 @@
 import re
+import secrets
 import shutil
 import subprocess
 from pathlib import Path
@@ -27,8 +28,8 @@ class FfmpegError(RuntimeError):
 
 
 def build_thumbnail_name(video):
-    """Return the storage name of the thumbnail, e.g. thumbnail/movie.jpg."""
-    return f'{THUMBNAIL_FOLDER}/{Path(video.video_file.name).stem}.jpg'
+    """Return a fresh name like thumbnail/movie_1a2b3c4d.jpg so no browser shows a cached one."""
+    return f'{THUMBNAIL_FOLDER}/{Path(video.video_file.name).stem}_{secrets.token_hex(4)}.jpg'
 
 
 def has_source_file(video):
