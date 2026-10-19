@@ -12,6 +12,7 @@ from video_app.utils import (
     delete_media_file,
     extract_thumbnail,
     has_source_file,
+    remove_orphaned_hls,
 )
 
 
@@ -43,6 +44,7 @@ def convert_to_hls(video_id):
         return
     for resolution, height in HLS_RESOLUTIONS.items():
         convert_rendition(video, resolution, height)
+    remove_orphaned_hls(video_id)
 
 
 def queue_video_processing(video_id):

@@ -121,11 +121,34 @@ def prepare_empty_dir(folder):
     folder.mkdir(parents=True)
 
 
+def build_temp_dir(output_dir):
+    """Return the temporary folder FFmpeg writes into, e.g. hls/1/480p.tmp."""
+    return output_dir.with_name(f'{output_dir.name}.tmp')
+
+
+def publish_dir(temp_dir, output_dir):
+    """Replace the public folder with the finished temporary folder."""
+    shutil.rmtree(output_dir, ignore_errors=True)
+    temp_dir.rename(output_dir)
+
+
 def convert_rendition(video, resolution, height):
-    """Convert the video into one HLS resolution."""
+    """Convert into a temporary folder and publish it only when FFmpeg succeeded."""
     output_dir = build_hls_dir(video.pk, resolution)
-    prepare_empty_dir(output_dir)
-    run_ffmpeg(build_hls_command(video.video_file.path, output_dir, height))
+    temp_dir = build_temp_dir(output_dir)
+    prepare_empty_dir(temp_dir)
+    try:
+        run_ffmpeg(build_hls_command(video.video_file.path, temp_dir, height))
+    except FfmpegError:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+    publish_dir(temp_dir, output_dir)
+
+
+def remove_orphaned_hls(video_id):
+    """Delete the HLS folder if the video was deleted while it was converted."""
+    if not Video.objects.filter(pk=video_id).exists():
+        shutil.rmtree(build_hls_root(video_id), ignore_errors=True)
 
 
 def find_hls_file(video_id, resolution, file_name):
