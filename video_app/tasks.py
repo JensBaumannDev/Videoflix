@@ -9,6 +9,7 @@ from video_app.utils import (
     HLS_RESOLUTIONS,
     build_thumbnail_name,
     convert_rendition,
+    delete_media_file,
     extract_thumbnail,
     has_source_file,
 )
@@ -27,9 +28,12 @@ def create_thumbnail(video_id):
     video = get_processable_video(video_id)
     if video is None:
         return
+    old_thumbnail = video.thumbnail.name
     thumbnail_name = build_thumbnail_name(video)
     extract_thumbnail(video.video_file.path, Path(settings.MEDIA_ROOT) / thumbnail_name)
     Video.objects.filter(pk=video_id).update(thumbnail=thumbnail_name)
+    if old_thumbnail != thumbnail_name:
+        delete_media_file(old_thumbnail)
 
 
 def convert_to_hls(video_id):
