@@ -11,6 +11,11 @@ THUMBNAIL_MAX_WIDTH = 640
 HLS_FOLDER = 'hls'
 HLS_SEGMENT_SECONDS = 10
 HLS_RESOLUTIONS = {'480p': 480, '720p': 720, '1080p': 1080}
+HLS_JOB_TIMEOUT = 60 * 60 * 3
+
+
+class FfmpegError(RuntimeError):
+    """Raised when FFmpeg fails; the message contains FFmpeg's error output."""
 
 
 def build_thumbnail_name(video):
@@ -30,9 +35,19 @@ def video_file_changed(video):
 
 
 def run_ffmpeg(arguments):
-    """Run FFmpeg quietly; raise CalledProcessError if it fails."""
+    """Run FFmpeg quietly; raise FfmpegError with FFmpeg's message if it fails."""
     command = ['ffmpeg', '-y', '-loglevel', 'error', *arguments]
-    subprocess.run(command, check=True, capture_output=True)
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as error:
+        raise FfmpegError(build_ffmpeg_error_message(error)) from error
+
+
+def build_ffmpeg_error_message(error):
+    """Return FFmpeg's error output, or the exit code if there is none."""
+    if error.stderr and error.stderr.strip():
+        return error.stderr.strip()
+    return f'FFmpeg failed with exit code {error.returncode}'
 
 
 def extract_thumbnail(source_path, output_path):

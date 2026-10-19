@@ -14,7 +14,7 @@ from video_app.tests.helpers import (
     generate_video_upload,
     make_upload,
 )
-from video_app.utils import HLS_RESOLUTIONS, build_hls_command, build_hls_dir
+from video_app.utils import HLS_RESOLUTIONS, FfmpegError, build_hls_command, build_hls_dir
 
 
 class HlsSettingsTests(TestCase):
@@ -148,8 +148,8 @@ class ConvertToHlsTaskTests(TempMediaMixin, TestCase):
 
     def test_ffmpeg_error_fails_the_job(self, run_ffmpeg):
         """A failing FFmpeg run stops the job and raises."""
-        run_ffmpeg.side_effect = subprocess.CalledProcessError(1, 'ffmpeg')
-        with self.assertRaises(subprocess.CalledProcessError):
+        run_ffmpeg.side_effect = FfmpegError('FFmpeg failed')
+        with self.assertRaises(FfmpegError):
             convert_to_hls(create_video().pk)
         self.assertEqual(run_ffmpeg.call_count, 1)
 
@@ -231,5 +231,6 @@ class ConvertToHlsWithRealFfmpegTests(TempMediaMixin, TestCase):
     def test_corrupt_video_fails_the_job(self):
         """A file that is no video makes the job fail."""
         video = create_video(video_file=make_upload('broken.mp4'))
-        with self.assertRaises(subprocess.CalledProcessError):
+        with self.assertRaises(FfmpegError) as context:
             convert_to_hls(video.pk)
+        self.assertIn('broken.mp4', str(context.exception))

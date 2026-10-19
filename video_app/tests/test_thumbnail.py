@@ -14,7 +14,7 @@ from video_app.tests.helpers import (
     generate_video_upload,
     make_upload,
 )
-from video_app.utils import build_thumbnail_name
+from video_app.utils import FfmpegError, build_thumbnail_name
 
 class ThumbnailNameTests(TempMediaMixin, TestCase):
     """The thumbnail file is named after the video file."""
@@ -122,12 +122,31 @@ class CreateThumbnailTaskTests(TempMediaMixin, TestCase):
 
     def test_ffmpeg_error_keeps_thumbnail_empty(self, run):
         """A failing FFmpeg run fails the job and stores nothing."""
-        run.side_effect = subprocess.CalledProcessError(1, 'ffmpeg')
+        run.side_effect = subprocess.CalledProcessError(1, 'ffmpeg', stderr='broken')
         video = create_video()
-        with self.assertRaises(subprocess.CalledProcessError):
+        with self.assertRaises(FfmpegError):
             create_thumbnail(video.pk)
         video.refresh_from_db()
         self.assertFalse(video.thumbnail)
+
+    def test_ffmpeg_error_message_reaches_the_job_log(self, run):
+        """The FFmpeg error output becomes the exception message."""
+        stderr = 'movie.mp4: Invalid data found when processing input'
+        run.side_effect = subprocess.CalledProcessError(1, 'ffmpeg', stderr=stderr)
+        with self.assertRaisesRegex(FfmpegError, 'Invalid data found'):
+            create_thumbnail(create_video().pk)
+
+    def test_ffmpeg_error_without_output(self, run):
+        """A failure without stderr still raises a readable error."""
+        run.side_effect = subprocess.CalledProcessError(1, 'ffmpeg')
+        with self.assertRaisesRegex(FfmpegError, 'exit code 1'):
+            create_thumbnail(create_video().pk)
+
+    def test_ffmpeg_output_is_read_as_text(self, run):
+        """stderr is decoded so the message is readable, not bytes."""
+        self.fake_ffmpeg_output(run)
+        create_thumbnail(create_video().pk)
+        self.assertTrue(run.call_args.kwargs['text'])
 
     def test_running_twice_keeps_one_thumbnail(self, run):
         """A second run overwrites the same file instead of adding one."""
@@ -167,7 +186,8 @@ class CreateThumbnailWithRealFfmpegTests(TempMediaMixin, TestCase):
     def test_corrupt_video_fails_the_job(self):
         """A file that is no video makes the job fail, no thumbnail is set."""
         video = create_video(video_file=make_upload('broken.mp4'))
-        with self.assertRaises(subprocess.CalledProcessError):
+        with self.assertRaises(FfmpegError) as context:
             create_thumbnail(video.pk)
+        self.assertIn('broken.mp4', str(context.exception))
         video.refresh_from_db()
         self.assertFalse(video.thumbnail)

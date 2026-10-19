@@ -5,14 +5,13 @@ from django.conf import settings
 
 from video_app.models import Video
 from video_app.utils import (
+    HLS_JOB_TIMEOUT,
     HLS_RESOLUTIONS,
     build_thumbnail_name,
     convert_rendition,
     extract_thumbnail,
     has_source_file,
 )
-
-HLS_JOB_TIMEOUT = 60 * 60 * 3
 
 
 def get_processable_video(video_id):

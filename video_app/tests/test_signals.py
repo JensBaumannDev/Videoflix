@@ -2,8 +2,9 @@ from unittest.mock import call, patch
 
 from django.test import TestCase
 
-from video_app.tasks import HLS_JOB_TIMEOUT, convert_to_hls, create_thumbnail
+from video_app.tasks import convert_to_hls, create_thumbnail
 from video_app.tests.helpers import TempMediaMixin, create_video, make_upload
+from video_app.utils import HLS_JOB_TIMEOUT
 
 
 @patch('django_rq.enqueue')
