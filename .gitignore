@@ -21,6 +21,9 @@ static/
 staticfiles/
 *.log
 
+# Server-specific Docker settings (deployment only)
+docker-compose.override.yml
+
 # Agent instructions (local only)
 AGENTS.md
 
