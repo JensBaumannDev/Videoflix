@@ -32,6 +32,13 @@ CORS_ALLOW_CREDENTIALS = True
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL", default="http://127.0.0.1:5501")
 
+COOKIE_SECURE = os.environ.get("COOKIE_SECURE", default="False") == "True"
+SESSION_COOKIE_SECURE = COOKIE_SECURE
+CSRF_COOKIE_SECURE = COOKIE_SECURE
+
+BEHIND_HTTPS_PROXY = os.environ.get("BEHIND_HTTPS_PROXY", default="False") == "True"
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https") if BEHIND_HTTPS_PROXY else None
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
