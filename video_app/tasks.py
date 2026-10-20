@@ -49,7 +49,11 @@ def convert_to_hls(video_id):
     remove_orphaned_hls(video_id)
 
 
-def queue_video_processing(video_id):
-    """Enqueue thumbnail creation and HLS conversion for the RQ worker."""
+def queue_thumbnail(video_id):
+    """Enqueue the automatic thumbnail creation for the RQ worker."""
     django_rq.enqueue(create_thumbnail, video_id)
+
+
+def queue_hls_conversion(video_id):
+    """Enqueue the HLS conversion (with long timeout) for the RQ worker."""
     django_rq.enqueue(convert_to_hls, video_id, job_timeout=HLS_JOB_TIMEOUT)

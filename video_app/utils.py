@@ -40,10 +40,23 @@ def has_source_file(video):
     return bool(video.video_file) and Path(video.video_file.path).is_file()
 
 
-def get_stored_video_file(video):
-    """Return the video file name saved in the database, or None for a new video."""
-    stored_names = Video.objects.filter(pk=video.pk).values_list('video_file', flat=True)
-    return stored_names.first()
+def get_stored_files(video):
+    """Return (video file, thumbnail) saved in the database, (None, None) for a new video."""
+    stored = Video.objects.filter(pk=video.pk).values_list('video_file', 'thumbnail').first()
+    return stored or (None, None)
+
+
+def detect_file_changes(video):
+    """Return whether video file and thumbnail differ from the stored ones."""
+    previous_file, previous_thumbnail = video.previous_files
+    file_changed = previous_file != video.video_file.name
+    thumbnail_changed = (previous_thumbnail or '') != video.thumbnail.name
+    return file_changed, thumbnail_changed
+
+
+def needs_auto_thumbnail(video, file_changed, thumbnail_changed):
+    """Return True if the thumbnail is empty or belongs to a replaced video file."""
+    return not video.thumbnail or (file_changed and not thumbnail_changed)
 
 
 def delete_media_file(storage_name):

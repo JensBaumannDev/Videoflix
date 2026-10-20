@@ -36,12 +36,21 @@ class VideoProcessingSignalTests(TempMediaMixin, TestCase):
 
     def test_changing_other_fields_queues_nothing(self, enqueue):
         """Editing title, description or category needs no processing."""
-        video = self.create_video_after_commit()
+        video = self.create_video_after_commit(thumbnail='thumbnail/movie_1a2b3c4d.jpg')
         enqueue.reset_mock()
         video.title = 'New title'
         with self.captureOnCommitCallbacks(execute=True):
             video.save()
         enqueue.assert_not_called()
+
+    def test_saving_video_without_thumbnail_retries_it(self, enqueue):
+        """If the first thumbnail job failed, the next save queues it again."""
+        video = self.create_video_after_commit()
+        enqueue.reset_mock()
+        video.title = 'New title'
+        with self.captureOnCommitCallbacks(execute=True):
+            video.save()
+        enqueue.assert_called_once_with(create_thumbnail, video.pk)
 
     def test_replacing_the_video_file_queues_again(self, enqueue):
         """A new video file needs a new thumbnail and new HLS files."""

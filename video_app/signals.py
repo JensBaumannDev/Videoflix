@@ -3,30 +3,40 @@ from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 from video_app.models import Video
-from video_app.tasks import queue_video_processing
+from video_app.tasks import queue_hls_conversion, queue_thumbnail
 from video_app.utils import (
     clear_video_list_cache,
     delete_media_file,
     delete_video_files,
-    get_stored_video_file,
+    detect_file_changes,
+    get_stored_files,
+    needs_auto_thumbnail,
 )
 
 
 @receiver(pre_save, sender=Video)
-def remember_previous_video_file(sender, instance, **kwargs):
-    """Note the video file stored before this save (None for a new video)."""
-    instance.previous_video_file = get_stored_video_file(instance)
+def remember_previous_files(sender, instance, **kwargs):
+    """Note video file and thumbnail stored before this save (None for a new video)."""
+    instance.previous_files = get_stored_files(instance)
 
 
 @receiver(post_save, sender=Video)
-def handle_new_video_file(sender, instance, **kwargs):
-    """After the commit, process a new video file and delete the replaced one."""
-    previous_file = instance.previous_video_file
-    if previous_file == instance.video_file.name:
-        return
-    transaction.on_commit(lambda: queue_video_processing(instance.pk))
-    if previous_file:
-        transaction.on_commit(lambda: delete_media_file(previous_file))
+def queue_jobs_for_changed_files(sender, instance, **kwargs):
+    """After the commit, create a missing thumbnail and convert a new video file."""
+    file_changed, thumbnail_changed = detect_file_changes(instance)
+    if needs_auto_thumbnail(instance, file_changed, thumbnail_changed):
+        transaction.on_commit(lambda: queue_thumbnail(instance.pk))
+    if file_changed:
+        transaction.on_commit(lambda: queue_hls_conversion(instance.pk))
+
+
+@receiver(post_save, sender=Video)
+def delete_replaced_files(sender, instance, **kwargs):
+    """After the commit, delete a replaced or cleared video file or thumbnail."""
+    current_names = [instance.video_file.name, instance.thumbnail.name]
+    for previous_name, current_name in zip(instance.previous_files, current_names):
+        if previous_name and previous_name != current_name:
+            transaction.on_commit(lambda name=previous_name: delete_media_file(name))
 
 
 @receiver(post_delete, sender=Video)
