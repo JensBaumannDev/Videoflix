@@ -28,6 +28,7 @@ from auth_app.utils import (
     build_registration_response,
     delete_token_cookies,
     find_active_user_by_email,
+    get_frontend_url,
     get_valid_refresh_token,
     reset_user_password,
     set_login_cookies,
@@ -47,7 +48,7 @@ class RegistrationView(APIView):
         if not serializer.is_valid():
             return Response({'detail': GENERIC_ERROR_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
         user = serializer.save()
-        queue_activation_email(user)
+        queue_activation_email(user, get_frontend_url(request))
         return Response(build_registration_response(user), status=status.HTTP_201_CREATED)
 
 
@@ -138,7 +139,7 @@ class PasswordResetView(APIView):
             return Response({'detail': GENERIC_ERROR_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
         user = find_active_user_by_email(serializer.validated_data['email'])
         if user is not None:
-            queue_password_reset_email(user)
+            queue_password_reset_email(user, get_frontend_url(request))
         return Response({'detail': PASSWORD_RESET_SENT_MESSAGE}, status=status.HTTP_200_OK)
 
 

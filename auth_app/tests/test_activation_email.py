@@ -1,6 +1,7 @@
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.core import mail
@@ -163,7 +164,8 @@ class RegistrationQueuesActivationEmailTests(APITestCase):
         with patch('django_rq.enqueue') as enqueue:
             self.client.post(self.url, self.payload, format='json')
         user = User.objects.get(email=VALID_EMAIL)
-        enqueue.assert_called_once_with(send_activation_email, user.pk)
+        enqueue.assert_called_once_with(
+            send_activation_email, user.pk, settings.FRONTEND_URL)
 
     def test_failed_registration_enqueues_nothing(self):
         """Invalid input does not enqueue any job."""
