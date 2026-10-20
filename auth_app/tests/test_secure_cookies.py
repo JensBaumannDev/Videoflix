@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import override_settings
@@ -64,3 +66,15 @@ class SecureJwtCookieTests(APITestCase):
         for name in TOKEN_COOKIES:
             with self.subTest(cookie=name):
                 self.assertFalse(response.cookies[name]['secure'])
+
+
+class AccessTokenLifetimeTests(APITestCase):
+    """The access token lifetime is configurable via ACCESS_TOKEN_LIFETIME_MINUTES."""
+
+    def test_default_lifetime_is_30_minutes(self):
+        """Without the variable the access token lives 30 minutes."""
+        self.assertEqual(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'], timedelta(minutes=30))
+
+    def test_lifetime_outlives_frontend_refresh_interval(self):
+        """The frontend refreshes every 20 minutes, so the token must live longer."""
+        self.assertGreater(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'], timedelta(minutes=20))

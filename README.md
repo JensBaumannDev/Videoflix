@@ -136,6 +136,9 @@ Additional variables of this project (not in the template):
 | :--- | :--- | :--- |
 | `FRONTEND_URL` | Fallback base URL for the links in activation and reset emails. Normally the links point to the frontend the request came from (its `Origin`, if listed in `CORS_ALLOWED_ORIGINS`) | `http://127.0.0.1:5501` |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated origins allowed to call the API with cookies | Live Server on ports 5500 / 5501 |
+| `COOKIE_SECURE` | `True` behind HTTPS: cookies are only sent over encrypted connections | `False` |
+| `BEHIND_HTTPS_PROXY` | `True` behind nginx with HTTPS: trust `X-Forwarded-Proto` for https URLs | `False` |
+| `ACCESS_TOKEN_LIFETIME_MINUTES` | Lifetime of the access token in minutes | `30` |
 
 The `.env` file contains secrets and is never committed.
 
