@@ -139,10 +139,10 @@ def build_login_response(user):
 
 
 def set_token_cookie(response, name, token):
-    """Set a JWT as HttpOnly cookie that expires together with the token."""
+    """Set a JWT as HttpOnly cookie (Secure under HTTPS) that expires with the token."""
     response.set_cookie(
         name, str(token), max_age=int(token.lifetime.total_seconds()),
-        httponly=True, samesite='Lax', secure=False,
+        httponly=True, samesite='Lax', secure=settings.COOKIE_SECURE,
     )
 
 
