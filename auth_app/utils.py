@@ -73,20 +73,28 @@ def activate_user(uidb64, token):
     return True
 
 
-def build_frontend_link(user, path):
+def get_frontend_url(request):
+    """Return the request's Origin if it is an allowed frontend, else FRONTEND_URL."""
+    origin = request.headers.get('Origin', '')
+    if origin and origin in settings.CORS_ALLOWED_ORIGINS:
+        return origin
+    return settings.FRONTEND_URL
+
+
+def build_frontend_link(user, path, frontend_url=None):
     """Return a frontend URL with the user's uid and token as query."""
     query = urlencode({'uid': make_uidb64(user), 'token': make_user_token(user)})
-    return f'{settings.FRONTEND_URL}{path}?{query}'
+    return f'{frontend_url or settings.FRONTEND_URL}{path}?{query}'
 
 
-def build_activation_link(user):
+def build_activation_link(user, frontend_url=None):
     """Return the frontend activation URL with uid and token as query."""
-    return build_frontend_link(user, ACTIVATION_PATH)
+    return build_frontend_link(user, ACTIVATION_PATH, frontend_url)
 
 
-def build_password_reset_link(user):
+def build_password_reset_link(user, frontend_url=None):
     """Return the frontend password confirm URL with uid and token as query."""
-    return build_frontend_link(user, PASSWORD_RESET_PATH)
+    return build_frontend_link(user, PASSWORD_RESET_PATH, frontend_url)
 
 
 def build_logo_part():
@@ -110,15 +118,15 @@ def build_html_email(subject, template_name, context, recipient):
     return email
 
 
-def build_activation_email(user):
+def build_activation_email(user, frontend_url=None):
     """Build the activation email with the link to the frontend."""
-    context = {'activation_link': build_activation_link(user)}
+    context = {'activation_link': build_activation_link(user, frontend_url)}
     return build_html_email(ACTIVATION_SUBJECT, 'activation_email', context, user.email)
 
 
-def build_password_reset_email(user):
+def build_password_reset_email(user, frontend_url=None):
     """Build the password reset email with the link to the frontend."""
-    context = {'reset_link': build_password_reset_link(user)}
+    context = {'reset_link': build_password_reset_link(user, frontend_url)}
     return build_html_email(PASSWORD_RESET_SUBJECT, 'password_reset_email', context, user.email)
 
 

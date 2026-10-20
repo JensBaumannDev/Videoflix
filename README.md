@@ -134,7 +134,7 @@ Additional variables of this project (not in the template):
 
 | Variable | Description | Default |
 | :--- | :--- | :--- |
-| `FRONTEND_URL` | Base URL of the frontend, used for the links in activation and reset emails | `http://127.0.0.1:5501` |
+| `FRONTEND_URL` | Fallback base URL for the links in activation and reset emails. Normally the links point to the frontend the request came from (its `Origin`, if listed in `CORS_ALLOWED_ORIGINS`) | `http://127.0.0.1:5501` |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated origins allowed to call the API with cookies | Live Server on ports 5500 / 5501 |
 
 The `.env` file contains secrets and is never committed.

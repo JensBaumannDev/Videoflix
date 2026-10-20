@@ -74,7 +74,8 @@ class PasswordResetSuccessTests(PasswordResetTestMixin, APITestCase):
     def test_enqueues_reset_email_once(self):
         """The reset email task is queued once with the user's id."""
         self.request_reset()
-        self.enqueue.assert_called_once_with(send_password_reset_email, self.user.pk)
+        self.enqueue.assert_called_once_with(
+            send_password_reset_email, self.user.pk, settings.FRONTEND_URL)
 
     def test_sends_no_email_directly(self):
         """The view itself sends nothing, the RQ worker does."""
@@ -84,12 +85,14 @@ class PasswordResetSuccessTests(PasswordResetTestMixin, APITestCase):
     def test_email_is_case_insensitive(self):
         """Upper case input finds the user."""
         self.request_reset({'email': 'USER@Example.COM'})
-        self.enqueue.assert_called_once_with(send_password_reset_email, self.user.pk)
+        self.enqueue.assert_called_once_with(
+            send_password_reset_email, self.user.pk, settings.FRONTEND_URL)
 
     def test_whitespace_around_email_is_ignored(self):
         """Leading and trailing spaces are trimmed."""
         self.request_reset({'email': f'  {VALID_EMAIL} '})
-        self.enqueue.assert_called_once_with(send_password_reset_email, self.user.pk)
+        self.enqueue.assert_called_once_with(
+            send_password_reset_email, self.user.pk, settings.FRONTEND_URL)
 
     def test_json_request(self):
         """A JSON body like the frontend sends works."""
@@ -113,7 +116,8 @@ class PasswordResetSuccessTests(PasswordResetTestMixin, APITestCase):
         """A user like the Docker superuser (username != email) is found by email."""
         admin = User.objects.create_superuser('admin', 'admin@example.com', 'adminpw')
         self.request_reset({'email': 'admin@example.com'})
-        self.enqueue.assert_called_once_with(send_password_reset_email, admin.pk)
+        self.enqueue.assert_called_once_with(
+            send_password_reset_email, admin.pk, settings.FRONTEND_URL)
 
     def test_username_is_not_accepted_as_email(self):
         """Only the email is looked up, not the username."""
@@ -124,7 +128,8 @@ class PasswordResetSuccessTests(PasswordResetTestMixin, APITestCase):
         """Other users are not affected."""
         create_user('other@example.com')
         self.request_reset()
-        self.enqueue.assert_called_once_with(send_password_reset_email, self.user.pk)
+        self.enqueue.assert_called_once_with(
+            send_password_reset_email, self.user.pk, settings.FRONTEND_URL)
 
     def test_url_path_matches_endpoint_doc(self):
         """The route is exactly /api/password_reset/."""
