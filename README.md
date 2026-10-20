@@ -1,4 +1,4 @@
-# Videoflix – Video Streaming Backend
+# Videoflix - Video Streaming Backend
 
 A REST API backend for a video streaming platform with adaptive HLS playback, developed as the final backend project within the Developer Akademie.
 
@@ -10,7 +10,7 @@ A REST API backend for a video streaming platform with adaptive HLS playback, de
 [![FFmpeg](https://img.shields.io/badge/FFmpeg-HLS-007808?style=flat-square&logo=ffmpeg&logoColor=white)](https://ffmpeg.org/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
 
-A live demo is coming soon.
+A live demo is available at: [videoflix.jensbaumann.com](https://videoflix.jensbaumann.com/)
 
 The matching frontend is provided by the Developer Akademie: [Developer-Akademie-Backendkurs/project.Videoflix](https://github.com/Developer-Akademie-Backendkurs/project.Videoflix)
 
@@ -26,8 +26,9 @@ The matching frontend is provided by the Developer Akademie: [Developer-Akademie
 7. [API Endpoints](#api-endpoints)
 8. [Project Structure](#project-structure)
 9. [Testing](#testing)
-10. [Troubleshooting](#troubleshooting)
-11. [Author](#author)
+10. [Deployment](#deployment)
+11. [Troubleshooting](#troubleshooting)
+12. [Author](#author)
 
 ---
 
@@ -45,7 +46,7 @@ Videos are uploaded through the Django admin. Thumbnail creation and HLS convers
 * **Secure Authentication:** Login with JWT stored in HttpOnly cookies, token refresh and logout with refresh token blacklisting. Error messages are kept generic and never reveal whether an account exists.
 * **Password Reset:** Reset email with a link valid for 24 hours; the old password becomes invalid immediately.
 * **Background Video Processing:** After an upload, a thumbnail (taken from 10 % into the video) and HLS renditions in 480p, 720p and 1080p are created automatically.
-* **Adaptive Streaming:** Video list for the dashboard (newest first), HLS playlists and segments per resolution – protected by the login cookie.
+* **Adaptive Streaming:** Video list for the dashboard (newest first), HLS playlists and segments per resolution - protected by the login cookie.
 * **Caching:** The video list is served from Redis and refreshed automatically whenever a video is added, changed or deleted.
 * **Automatic Cleanup:** Files of deleted or replaced videos are removed; half-finished conversions are never served.
 * **Test-Driven Development:** Every endpoint and job is covered by tests (100 % coverage), including end-to-end tests with real FFmpeg conversions.
@@ -102,7 +103,7 @@ The entrypoint waits for PostgreSQL, collects static files, runs the migrations,
 * Job dashboard: `http://127.0.0.1:8000/django-rq/`
 
 ### 5. Start the frontend
-Clone the [frontend](https://github.com/Developer-Akademie-Backendkurs/project.Videoflix), open it in VS Code and start it with **Live Server** (port 5501). Open it via `http://127.0.0.1:5501` – **not** `localhost`, otherwise the browser does not send the login cookies to the backend.
+Clone the [frontend](https://github.com/Developer-Akademie-Backendkurs/project.Videoflix), open it in VS Code and start it with **Live Server** (port 5501). Open it via `http://127.0.0.1:5501` - **not** `localhost`, otherwise the browser does not send the login cookies to the backend.
 
 Stop the containers with `docker compose down`. `docker compose down -v` additionally deletes the database and all uploaded videos.
 
@@ -115,18 +116,18 @@ Variables from `.env.template`:
 | Variable | Description | Example |
 | :--- | :--- | :--- |
 | `DJANGO_SUPERUSER_USERNAME` | Admin user created on start | `admin` |
-| `DJANGO_SUPERUSER_PASSWORD` | Password of the admin user | – |
+| `DJANGO_SUPERUSER_PASSWORD` | Password of the admin user | - |
 | `DJANGO_SUPERUSER_EMAIL` | Email of the admin user | `admin@example.com` |
-| `SECRET_KEY` | Django secret key – use your own random value | – |
+| `SECRET_KEY` | Django secret key - use your own random value | - |
 | `DEBUG` | `True` for development (also serves media files) | `True` |
 | `ALLOWED_HOSTS` | Comma-separated host names | `localhost,127.0.0.1` |
 | `CSRF_TRUSTED_ORIGINS` | Comma-separated trusted origins | `http://127.0.0.1:5501` |
-| `DB_NAME` / `DB_USER` / `DB_PASSWORD` | PostgreSQL credentials | – |
+| `DB_NAME` / `DB_USER` / `DB_PASSWORD` | PostgreSQL credentials | - |
 | `DB_HOST` / `DB_PORT` | PostgreSQL host and port | `db` / `5432` |
 | `REDIS_HOST` / `REDIS_PORT` / `REDIS_DB` | Redis for Django RQ | `redis` / `6379` / `0` |
 | `REDIS_LOCATION` | Redis URL for the cache | `redis://redis:6379/1` |
 | `EMAIL_HOST` / `EMAIL_PORT` | SMTP server | `sandbox.smtp.mailtrap.io` / `587` |
-| `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` | SMTP credentials | – |
+| `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` | SMTP credentials | - |
 | `EMAIL_USE_TLS` / `EMAIL_USE_SSL` | Encryption (enable only one) | `True` / `False` |
 | `DEFAULT_FROM_EMAIL` | Sender address of all emails | `noreply@example.com` |
 
@@ -153,7 +154,7 @@ The `.env` file contains secrets and is never committed.
    * **HLS conversion:** one rendition each for 480p, 720p and 1080p with 10-second segments.
 4. Follow the progress with `docker compose logs -f web` or in the job dashboard. A 10-minute film takes a few minutes.
 
-Only upload videos you are allowed to publish, e.g. the [Blender open movies](https://studio.blender.org/films/) (CC BY – credit them in the description) or royalty-free clips.
+Only upload videos you are allowed to publish, e.g. the [Blender open movies](https://studio.blender.org/films/) (CC BY - credit them in the description) or royalty-free clips.
 
 Generated files are stored in the Docker volume `videoflix_media`:
 ```text
@@ -173,13 +174,13 @@ All endpoints are prefixed with `/api/`.
 
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :--- | :--- |
-| POST | `register/` | – | Create an inactive user and send the activation email |
-| GET | `activate/<uidb64>/<token>/` | – | Activate the account |
-| POST | `login/` | – | Log in; sets the HttpOnly cookies `access_token` and `refresh_token` |
+| POST | `register/` | - | Create an inactive user and send the activation email |
+| GET | `activate/<uidb64>/<token>/` | - | Activate the account |
+| POST | `login/` | - | Log in; sets the HttpOnly cookies `access_token` and `refresh_token` |
 | POST | `logout/` | Refresh cookie | Blacklist the refresh token and delete both cookies |
 | POST | `token/refresh/` | Refresh cookie | Set a new `access_token` cookie |
-| POST | `password_reset/` | – | Send a reset email (always answers 200) |
-| POST | `password_confirm/<uidb64>/<token>/` | – | Set a new password |
+| POST | `password_reset/` | - | Send a reset email (always answers 200) |
+| POST | `password_confirm/<uidb64>/<token>/` | - | Set a new password |
 
 ### Videos
 
@@ -237,6 +238,26 @@ A coverage report is printed automatically. Some tests convert tiny generated vi
 
 ---
 
+## Deployment
+
+The live demo runs on a small Ubuntu server with the unchanged Docker setup:
+
+* **nginx** on the host terminates HTTPS (Let's Encrypt) and serves the frontend, proxies `/api/`, `/admin/`, `/static/` and `/django-rq/` to the backend and serves thumbnails directly. Videos and HLS files are only delivered through the API with login.
+* A server-only `docker-compose.override.yml` binds the backend to `127.0.0.1` and stores media in a folder nginx can read. It is ignored by Git, so the Developer Akademie files stay untouched.
+* Production values in `.env`:
+
+```text
+DEBUG=False
+COOKIE_SECURE=True
+BEHIND_HTTPS_PROXY=True
+ACCESS_TOKEN_LIFETIME_MINUTES=720
+GUNICORN_CMD_ARGS=--timeout 600 --workers 3
+```
+
+`COOKIE_SECURE` sends cookies only over HTTPS, `BEHIND_HTTPS_PROXY` makes Django trust `X-Forwarded-Proto` from nginx, and more gunicorn workers keep the API responsive while a large video is uploaded.
+
+---
+
 ## Troubleshooting
 
 | Problem | Solution |
@@ -251,9 +272,9 @@ A coverage report is printed automatically. Some tests convert tiny generated vi
 
 ## Author
 
-| Developer | GitHub | LinkedIn | Portfolio |
-| :--- | :--- | :--- | :--- |
-| **Jens Baumann** | [@JensBaumannDev](https://github.com/JensBaumannDev) | [Jens Baumann](https://www.linkedin.com/in/jens-baumann-7a6866315/) | [jensbaumann.com](https://jensbaumann.com/) |
+| Developer | GitHub | LinkedIn | Portfolio | Malt |
+| :--- | :--- | :--- | :--- | :--- |
+| **Jens Baumann** | [@JensBaumannDev](https://github.com/JensBaumannDev) | [Jens Baumann](https://www.linkedin.com/in/jens-baumann-7a6866315/) | [jensbaumann.com](https://jensbaumann.com/) | [jensbaumann](https://www.malt.de/profile/jensbaumann) |
 
 ---
 Developed as part of the software engineering curriculum at the [Developer Akademie](https://developerakademie.com/).
